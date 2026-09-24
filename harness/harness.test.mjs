@@ -102,6 +102,20 @@ describe("judgeFile", () => {
 		assert.deepEqual(verdicts.b, { verdict: "full" })
 	})
 
+	// Its maintainers can't inspect a private file to dispute the result, and
+	// the readers outvoting it may share a lineage.
+	it("won't mark a reader wrong on a private file by majority alone", () => {
+		const wrongPitch = reading({ tracks: [{ ...reading().tracks[0], pitches: [41, 52, 64] }] })
+		const results = { a: read(reading()), b: read(reading()), c: read(wrongPitch) }
+		const hidden = judgeFile({ id: "private/x", tier: "private", results }, none).verdicts
+		assert.deepEqual(hidden.c, { verdict: "unverified", checks: ["pitches"] })
+		assert.deepEqual(hidden.a, { verdict: "full" })
+
+		const confirmed = new Map([["private/x#pitches", { correct: ["a", "b"] }]])
+		const settled = judgeFile({ id: "private/x", tier: "private", results }, confirmed).verdicts
+		assert.deepEqual(settled.c, { verdict: "partial", checks: ["pitches"] })
+	})
+
 	// A reading of a private file is its content. Verdicts are what gets
 	// published, so nothing from a reading may survive into them.
 	it("carries no reading into a verdict", () => {

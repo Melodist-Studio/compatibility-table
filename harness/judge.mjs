@@ -46,13 +46,19 @@ export const referenceFor = (check, readers, adjudication) => {
 	return answer
 }
 
-/** A tool's verdict on one file, given the reference answer to each check. */
-export const verdictFor = (result, references) => {
+/**
+ * A tool's verdict on one file, given the reference answer to each check.
+ * `provisional` names checks whose answer a reader may not be marked wrong
+ * against yet (see judgeFile): a disagreement with one of those leaves the
+ * check unsettled rather than failed.
+ */
+export const verdictFor = (result, references, provisional = new Set()) => {
 	if (result.outcome === "unsupported") return { verdict: "unsupported" }
 	if (FAILURES.has(result.outcome)) return { verdict: "fails", reason: result.outcome }
 
-	const wrong = CHECKS.filter(c => references[c.id] && references[c.id] !== hashAnswer(project(c, result.reading)))
-	const unsettled = CHECKS.filter(c => !references[c.id])
+	const disagrees = c => references[c.id] && references[c.id] !== hashAnswer(project(c, result.reading))
+	const wrong = CHECKS.filter(c => disagrees(c) && !provisional.has(c.id))
+	const unsettled = CHECKS.filter(c => !references[c.id] || (disagrees(c) && provisional.has(c.id)))
 	if (wrong.length) return { verdict: "partial", checks: wrong.map(c => c.id) }
 	if (unsettled.length) return { verdict: "unverified", checks: unsettled.map(c => c.id) }
 	return { verdict: "full" }
@@ -65,20 +71,31 @@ export const verdictFor = (result, references) => {
  */
 export const hashAnswer = answer => sha256(answer)
 
-/** One file's reference answers (hashed) and every tool's verdict. */
+/**
+ * One file's reference answers (hashed) and every tool's verdict.
+ *
+ * On a private file, a majority alone can't mark a reader wrong. Its
+ * maintainers can't inspect the file to dispute the result, and the readers in
+ * a majority are often not independent. So those checks stay unverified until
+ * an adjudication confirms them.
+ */
 export const judgeFile = (file, adjudications) => {
 	const readers = Object.entries(file.results)
 		.filter(([, result]) => result.outcome === "read")
 		.map(([tool, result]) => ({ tool, reading: result.reading }))
 
+	const adjudicated = check => adjudications.get(`${file.id}#${check.id}`)
 	const references = Object.fromEntries(
 		CHECKS.map(check => {
-			const answer = referenceFor(check, readers, adjudications.get(`${file.id}#${check.id}`))
+			const answer = referenceFor(check, readers, adjudicated(check))
 			return [check.id, answer === null ? null : hashAnswer(answer)]
 		}),
 	)
+	const provisional = new Set(
+		file.tier === "private" ? CHECKS.filter(check => !adjudicated(check)).map(check => check.id) : [],
+	)
 	const verdicts = Object.fromEntries(
-		Object.entries(file.results).map(([tool, result]) => [tool, verdictFor(result, references)]),
+		Object.entries(file.results).map(([tool, result]) => [tool, verdictFor(result, references, provisional)]),
 	)
 	return { references, verdicts }
 }
