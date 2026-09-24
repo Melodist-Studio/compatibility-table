@@ -1,0 +1,40 @@
+name: Check
+
+# Proves the published results from public material alone: the public files,
+# the open-source readers, and the published reference answers. The results
+# themselves are produced elsewhere (see README, "How the table is made").
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Upstream readers and files change under us; a weekly run notices.
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: npm ci
+      - run: python -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+      - name: Harness tests
+        run: npm test
+
+      - name: Fetch and verify the public files
+        run: npm run corpus
+
+      - name: Reproduce the published verdicts
+        run: node harness/reproduce.mjs
+
+      - name: TABLE.md matches results.json
+        run: node harness/render.mjs && git diff --exit-code TABLE.md

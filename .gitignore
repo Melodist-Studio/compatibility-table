@@ -1,0 +1,6 @@
+node_modules/
+.venv/
+# Downloaded upstream files. Never committed: they are cited, not redistributed.
+.corpus/
+# Raw readings hold note-level content. Only verdicts leave the machine.
+.work/

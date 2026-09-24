@@ -1,0 +1,22 @@
+{
+	"name": "compatibility-table",
+	"private": true,
+	"type": "module",
+	"description": "How well each Guitar Pro reader actually reads each Guitar Pro version, measured rather than claimed",
+	"license": "MIT",
+	"scripts": {
+		"corpus": "node harness/corpus.mjs",
+		"measure": "node harness/measure.mjs",
+		"judge": "node harness/judge.mjs",
+		"render": "node harness/render.mjs",
+		"table": "npm run corpus && npm run measure && npm run judge && npm run render",
+		"test": "node --test"
+	},
+	"dependencies": {
+		"@coderline/alphatab": "1.8.4",
+		"fflate": "0.8.3"
+	},
+	"engines": {
+		"node": ">=22"
+	}
+}
