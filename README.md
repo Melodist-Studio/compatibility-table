@@ -76,6 +76,13 @@ make. For each file and each check:
    readers that are right and says how that was established, usually by
    checking in Guitar Pro itself.
 
+A majority is only as good as the independence of the readers in it, and
+readers aren't fully independent. Libraries are often written with another as
+a reference: Melodist's Guitar Pro parsers were checked against PyGuitarPro and
+alphaTab while they were built. So when a reader is outvoted on a private file,
+which its maintainers can't inspect for themselves, the verdict isn't
+published until it's confirmed in Guitar Pro.
+
 ### Results
 
 | | |

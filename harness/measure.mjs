@@ -43,13 +43,18 @@ export const publicFiles = () =>
 		})),
 	)
 
-const privateFiles = dir =>
+/**
+ * Files in `dir` that aren't already public. A private copy of a public file is
+ * the same bytes, so it's measured once, as public: it can be cited.
+ */
+const privateFiles = (dir, publicHashes) =>
 	listFiles(dir)
 		.filter(isGuitarProFilename)
 		.map(file => {
 			const hash = sha256(readBytes(file))
 			return { id: `private/${hash.slice(0, 12)}`, tier: "private", sha256: hash, file }
 		})
+		.filter(entry => !publicHashes.has(entry.sha256))
 
 /**
  * One tool on one file. Only the outcome and the reading are kept: a tool's
@@ -120,7 +125,9 @@ const main = async () => {
 	const argv = process.argv
 	const adapters = await loadAdapters(argv)
 	const privateFlag = argv.indexOf("--private")
-	const files = [...publicFiles(), ...(privateFlag >= 0 ? privateFiles(argv[privateFlag + 1]) : [])]
+	const open = publicFiles()
+	const hidden = privateFlag >= 0 ? privateFiles(argv[privateFlag + 1], new Set(open.map(f => f.sha256))) : []
+	const files = [...open, ...hidden]
 	const { tools, measured } = await measureAll(files, adapters)
 
 	mkdirSync(path.dirname(READINGS), { recursive: true })

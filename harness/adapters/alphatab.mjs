@@ -1,7 +1,9 @@
 // alphaTab's reading of one file. Usage: node alphatab.mjs <file>
 //
 // alphaTab numbers strings from the lowest (string 1) and stores tuning from
-// the highest, so a note's open string is tuning[length - string].
+// the highest, so a note's open string is tuning[length - string]. A staff with
+// no strings (a keyboard part) has no tuning and no fret: its notes carry their
+// pitch directly, and with nothing to fret, that pitch is the one played.
 
 import { readFileSync } from "node:fs"
 
@@ -25,9 +27,12 @@ const readTrack = track => {
 					for (const note of beat.notes) {
 						if (note.isTieDestination) continue
 						notes += 1
-						if (!percussion && staff.tuning.length > 0) {
-							pitches.push(staff.tuning[staff.tuning.length - note.string] + note.fret)
-						}
+						if (percussion) continue
+						pitches.push(
+							staff.tuning.length > 0
+								? staff.tuning[staff.tuning.length - note.string] + note.fret
+								: note.realValue,
+						)
 					}
 				}
 			}
